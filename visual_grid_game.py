@@ -59,7 +59,8 @@ class VisualGridHuntGame:
         ahead_x, ahead_y = ax + dx, ay + dy
 
         # wall_ahead: True if the cell in front is a wall OR out of bounds
-        out_of_bounds = not (0 <= ahead_x < self.width and 0 <= ahead_y < self.height)
+        out_of_bounds = not (
+            0 <= ahead_x < self.width and 0 <= ahead_y < self.height)
         wall_ahead = out_of_bounds or (ahead_x, ahead_y) in self.walls
 
         # food_here: True if there is food on the agent's CURRENT cell
@@ -87,8 +88,10 @@ class VisualGridHuntGame:
         new_pos = list(self.agent_pos)
 
         # --- Turning actions (change facing, no movement) ---
-        turn_left_map  = {'Up': 'Left',  'Left': 'Down',  'Down': 'Right', 'Right': 'Up'}
-        turn_right_map = {'Up': 'Right', 'Right': 'Down', 'Down': 'Left',  'Left': 'Up'}
+        turn_left_map = {'Up': 'Left',  'Left': 'Down',
+                         'Down': 'Right', 'Right': 'Up'}
+        turn_right_map = {'Up': 'Right', 'Right': 'Down',
+                          'Down': 'Left',  'Left': 'Up'}
 
         if action == 'turn_left':
             self.agent_facing = turn_left_map[self.agent_facing]
@@ -113,7 +116,7 @@ class VisualGridHuntGame:
             new_pos[0] += dx
             new_pos[1] += dy
             # Clamp to grid boundaries
-            new_pos[0] = max(0, min(self.width  - 1, new_pos[0]))
+            new_pos[0] = max(0, min(self.width - 1, new_pos[0]))
             new_pos[1] = max(0, min(self.height - 1, new_pos[1]))
 
         # --- Legacy directional actions (backward compatibility) ---
@@ -221,8 +224,10 @@ class ModelBasedAgent:
         'Left':  (-1, 0),
         'Right': (1,  0),
     }
-    _TURN_LEFT  = {'Up': 'Left',  'Left': 'Down',  'Down': 'Right', 'Right': 'Up'}
-    _TURN_RIGHT = {'Up': 'Right', 'Right': 'Down', 'Down': 'Left',  'Left': 'Up'}
+    _TURN_LEFT = {'Up': 'Left',  'Left': 'Down',
+                  'Down': 'Right', 'Right': 'Up'}
+    _TURN_RIGHT = {'Up': 'Right', 'Right': 'Down',
+                   'Down': 'Left',  'Left': 'Up'}
 
     def _cell_in_direction(self, direction):
         """Return the relative cell that is one step in `direction`."""
@@ -249,12 +254,12 @@ class ModelBasedAgent:
 
         # Rule 2 — wall ahead: decide turn direction using memory
         if percept['wall_ahead']:
-            left_dir  = self._TURN_LEFT[self.facing]
+            left_dir = self._TURN_LEFT[self.facing]
             right_dir = self._TURN_RIGHT[self.facing]
-            left_cell  = self._cell_in_direction(left_dir)
+            left_cell = self._cell_in_direction(left_dir)
             right_cell = self._cell_in_direction(right_dir)
 
-            left_is_visited  = left_cell in self.visited
+            left_is_visited = left_cell in self.visited
             right_is_visited = right_cell in self.visited
 
             # Step 1.3 (4) example rule:
@@ -313,15 +318,18 @@ class GridGameGUI:
 
         # Dynamically calculate cell size so the total canvas fits nicely within a 600x600 window ceiling
         max_canvas_dim = 600
-        self.cell_size = max(20, min(max_canvas_dim // self.env.width, max_canvas_dim // self.env.height))
+        self.cell_size = max(
+            20, min(max_canvas_dim // self.env.width, max_canvas_dim // self.env.height))
 
         canvas_w = self.env.width * self.cell_size
         canvas_h = self.env.height * self.cell_size
 
-        self.canvas = tk.Canvas(root, width=canvas_w, height=canvas_h, bg="white")
+        self.canvas = tk.Canvas(root, width=canvas_w,
+                                height=canvas_h, bg="white")
         self.canvas.pack()
 
-        self.label = tk.Label(root, text="Score: 0 | Steps: 0", font=("Arial", 14))
+        self.label = tk.Label(
+            root, text="Score: 0 | Steps: 0", font=("Arial", 14))
         self.label.pack(pady=10)
 
         self.btn = tk.Button(root, text="Start Simulation", command=self.run_loop, font=("Arial", 12), bg="#000066",
@@ -340,8 +348,10 @@ class GridGameGUI:
                 x2 = x1 + self.cell_size
                 y2 = y1 + self.cell_size
 
-                color = "#f1f5f9" if (x, y) not in self.env.walls else "#64748b"
-                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="#cbd5e1")
+                color = "#f1f5f9" if (
+                    x, y) not in self.env.walls else "#64748b"
+                self.canvas.create_rectangle(
+                    x1, y1, x2, y2, fill=color, outline="#cbd5e1")
 
                 # Only draw text if cell is large enough
                 if self.cell_size >= 40 and (x, y) in self.env.walls:
