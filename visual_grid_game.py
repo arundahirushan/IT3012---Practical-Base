@@ -15,8 +15,14 @@ class VisualGridHuntGame:
         if custom_walls is not None:
             self.walls = set(custom_walls)
         else:
-            # Generate some default scattered walls for a larger grid
-            self.walls = {(2, 2), (2, 3), (5, 5), (6, 5), (3, 7)}
+            # Dynamically generate random scattered walls (~10% of total grid cells)
+            self.walls = set()
+            num_walls = int(self.width * self.height * 0.10)
+            while len(self.walls) < num_walls:
+                wx = random.randint(0, self.width - 1)
+                wy = random.randint(0, self.height - 1)
+                if (wx, wy) != (0, 0):  # Avoid agent starting position
+                    self.walls.add((wx, wy))
 
         # Dynamically generate random food positions avoiding walls and agent start
         self.food_positions = set()
@@ -72,6 +78,13 @@ class VisualGridHuntGame:
             'facing':     self.agent_facing,
             'score':      self.score,
             'remaining_food': len(self.food_positions),
+            # ── Step 1.1: Expose the global world model so search agents ────
+            # can plan paths offline before taking any physical action.
+            'grid_size': (self.width, self.height),
+            'walls':     list(self.walls),
+            'all_food':  list(self.food_positions),
+            # Current agent position is also exposed for search planning
+            'agent_pos': list(self.agent_pos),
         }
 
     def execute_action(self, action: str):
@@ -419,6 +432,9 @@ class GridGameGUI:
 
 
 if __name__ == "__main__":
+    # ── Step 1.2/1.3: import SearchAgent from agent.py ──────────────────────
+    from agent import SearchAgent
+
     root = tk.Tk()
     root.withdraw()  # hide main window until choice is made
 
@@ -428,33 +444,57 @@ if __name__ == "__main__":
         "IT3012 — Agent Selection",
         "Which agent?\n\n"
         "  1 = SimpleReflexAgent  (will get trapped)\n"
-        "  2 = ModelBasedAgent    (uses memory to escape)\n\n"
-        "Enter 1 or 2:",
+        "  2 = ModelBasedAgent    (uses memory to escape)\n"
+        "  3 = SearchAgent — BFS  (Practical 03, optimal)\n"
+        "  4 = SearchAgent — DFS  (Practical 03, suboptimal)\n"
+        "  5 = SearchAgent — UCS  (Practical 03, optimal)\n\n"
+        "Enter 1, 2, 3, 4, or 5:",
         parent=root,
     )
 
     if choice == '2':
         agent_cls = ModelBasedAgent
-        title_suffix = "Model-Based Agent (Step 1.3)"
+        title_suffix = "Model-Based Agent (Practical 02)"
+    elif choice == '3':
+        # BFS Search Agent
+        def make_bfs():
+            a = SearchAgent(); a.active_algo = 'BFS'; return a
+        agent_cls = make_bfs
+        title_suffix = "Search Agent — BFS (Practical 03)"
+    elif choice == '4':
+        # DFS Search Agent
+        def make_dfs():
+            a = SearchAgent(); a.active_algo = 'DFS'; return a
+        agent_cls = make_dfs
+        title_suffix = "Search Agent — DFS (Practical 03)"
+    elif choice == '5':
+        # UCS Search Agent
+        def make_ucs():
+            a = SearchAgent(); a.active_algo = 'UCS'; return a
+        agent_cls = make_ucs
+        title_suffix = "Search Agent — UCS (Practical 03)"
     else:
         agent_cls = SimpleReflexAgent
-        title_suffix = "Simple Reflex Agent (Step 1.2)"
+        title_suffix = "Simple Reflex Agent (Practical 02)"
 
     root.deiconify()
 
-    # U-shaped trap — identical map for fair comparison
-    u_trap_walls = [
-        (4, 2), (4, 3), (4, 4), (4, 5),   # left arm of U
-        (5, 2),                            # bottom of U
-        (6, 2), (6, 3), (6, 4), (6, 5),   # right arm of U
+    # Fixed set of 15 manually placed walls (same map on every run)
+    custom_fixed_walls = [
+        # Wall 1: Vertical barrier on the left (5 blocks)
+        (5, 4), (5, 5), (5, 6), (5, 7), (5, 8),
+        # Wall 2: Horizontal barrier in the middle (5 blocks)
+        (12, 12), (13, 12), (14, 12), (15, 12), (16, 12),
+        # Wall 3: L-shaped barrier on the right (5 blocks)
+        (22, 6), (22, 7), (22, 8), (23, 8), (24, 8)
     ]
 
     app = GridGameGUI(
         root,
-        width=10, height=8,
-        num_food=5,
+        width=30, height=20,
+        num_food=10,
         num_opponents=0,
-        walls=u_trap_walls,
+        walls=custom_fixed_walls,   # <--- Fixed 15 manually placed walls
         agent_class=agent_cls,
     )
     root.title(f"IT3012 — {title_suffix}")
