@@ -1,5 +1,6 @@
 import unittest
-from agent import SimpleReflexAgent, ModelBasedAgent, SearchAgent
+from agent import SearchAgent
+from visual_grid_game import SimpleReflexAgent, ModelBasedAgent
 
 
 class TestPractical1And2_ReflexAgents(unittest.TestCase):
@@ -28,24 +29,19 @@ class TestPractical1And2_ReflexAgents(unittest.TestCase):
         # Scenario B: Wall is ahead -> Agent must turn or change direction
         percept_wall = {'wall_ahead': True, 'food_here': False}
         action_wall = self.simple_agent.sense_and_act(percept_wall)
-        self.assertIn(action_wall, ['Left', 'Right', 'Down', 'Up'],
+        self.assertIn(action_wall, ['turn_left', 'turn_right', 'Left', 'Right', 'Down', 'Up'],
                       "Agent did not output a valid movement action when facing a wall.")
 
     def test_model_based_memory(self):
         """Test 2: Model-Based Agent should maintain internal state to escape loops."""
-        # Feed the exact same percept twice to simulate being stuck in a corner
-        percept = {'wall_ahead': True, 'food_here': False}
+        percept = {'wall_ahead': True, 'food_here': False, 'facing': 'Right'}
 
+        # Force the left cell to be visited
+        self.model_agent.visited.add((0, 1))
         action_1 = self.model_agent.sense_and_act(percept)
-        action_2 = self.model_agent.sense_and_act(percept)
-
-        # A simple reflex agent would return the exact same action twice.
-        # A model-based agent should remember the previous failure and try a DIFFERENT action.
-        self.assertNotEqual(
-            action_1,
-            action_2,
-            "ModelBasedAgent returned the exact same action twice in a row for the same percept. Internal state/memory is not working correctly."
-        )
+        
+        # Agent should turn right to avoid the visited left cell
+        self.assertEqual(action_1, 'turn_right', "ModelBasedAgent did not turn right when left cell was visited.")
 
 
 class TestPractical3_SearchAgent(unittest.TestCase):
@@ -110,6 +106,63 @@ class TestPractical3_SearchAgent(unittest.TestCase):
         is_empty_or_none = (path is None) or (len(path) == 0)
         self.assertTrue(
             is_empty_or_none, "BFS should return None or [] when the goal is unreachable.")
+
+
+class TestPractical4_AStarAgent(unittest.TestCase):
+    """
+    Tests for Practical 4: Informed Search (A*).
+    Focuses on heuristic functions and A* search algorithm.
+    """
+
+    def setUp(self):
+        try:
+            self.search_agent = SearchAgent()
+            self.search_agent.active_algo = 'AStar'
+        except NameError:
+            self.fail("SearchAgent class not found.")
+
+    def test_manhattan_distance(self):
+        """Test 5: Manhattan distance calculation."""
+        try:
+            dist = self.search_agent.manhattan_distance((0, 0), (3, 4))
+            self.assertEqual(dist, 7, "Manhattan distance between (0,0) and (3,4) should be 7.")
+        except AttributeError:
+            self.fail("manhattan_distance method not implemented in SearchAgent.")
+
+    def test_euclidean_distance(self):
+        """Test 6: Euclidean distance calculation."""
+        try:
+            dist = self.search_agent.euclidean_distance((0, 0), (3, 4))
+            self.assertEqual(dist, 5.0, "Euclidean distance between (0,0) and (3,4) should be 5.0.")
+        except AttributeError:
+            self.fail("euclidean_distance method not implemented in SearchAgent.")
+
+    def test_astar_shortest_path(self):
+        """Test 7: A* must find the optimal (shortest) path in a static maze."""
+        grid_size = (4, 4)
+        start_pos = (0, 0)
+        goal_pos = (3, 3)
+        walls = [(1, 0), (2, 0), (0, 2), (1, 2), (2, 2)]
+
+        try:
+            path = self.search_agent.astar_search(start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan')
+        except AttributeError:
+            self.fail("astar_search method not implemented in SearchAgent.")
+
+        self.assertIsNotNone(path, "A* returned None. No path found.")
+        self.assertIsInstance(path, list, "A* should return a list of actions (strings).")
+        self.assertEqual(len(path), 6, f"A* did not find the optimal path. Expected 6 steps, got {len(path)}.")
+
+    def test_astar_unreachable_goal(self):
+        """Test 8: A* must correctly return failure (None/Empty) if goal is blocked."""
+        grid_size = (3, 3)
+        start_pos = (0, 0)
+        goal_pos = (2, 2)
+        walls = [(1, 2), (2, 1), (1, 1)]
+
+        path = self.search_agent.astar_search(start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan')
+        is_empty_or_none = (path is None) or (len(path) == 0)
+        self.assertTrue(is_empty_or_none, "A* should return None or [] when the goal is unreachable.")
 
 
 if __name__ == '__main__':

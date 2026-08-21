@@ -2,6 +2,7 @@
 import random
 from collections import deque
 import heapq
+import math
 
 
 # =============================================================================
@@ -33,6 +34,14 @@ class SearchAgent:
     def __init__(self):
         self.plan = []                 # Step 1.3: the offline action sequence
         self.active_algo = 'BFS'      # Switch to 'DFS' or 'UCS' to compare
+
+    def manhattan_distance(self, pos, goal):
+        """h(n) = |x1 - x2| + |y1 - y2|"""
+        return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+
+    def euclidean_distance(self, pos, goal):
+        """h(n) = sqrt((x1-x2)^2 + (y1-y2)^2)"""
+        return math.sqrt((pos[0] - goal[0])**2 + (pos[1] - goal[1])**2)
 
     # ──────────────────────────────────────────────────────────────────────────
     # Step 1.2 (3) — BFS: FIFO queue → shallowest (shortest) path first
@@ -162,6 +171,53 @@ class SearchAgent:
         return []
 
     # ──────────────────────────────────────────────────────────────────────────
+    # Step 1.2: A* Search
+    # ──────────────────────────────────────────────────────────────────────────
+    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan'):
+        width, height = grid_size
+        wall_set = set(map(tuple, walls))
+
+        # Select heuristic
+        h = self.manhattan_distance if heuristic_type == 'manhattan' else self.euclidean_distance
+
+        g_start = 0
+        h_start = h(start_pos, goal_pos)
+        f_start = g_start + h_start
+
+        counter = 0
+        frontier = [(f_start, g_start, counter, tuple(start_pos), [])]
+        reached_states = set()
+
+        while frontier:
+            f_cost, g_cost, _, current_pos, path_taken = heapq.heappop(frontier)
+
+            if current_pos == tuple(goal_pos):
+                return path_taken
+
+            if current_pos in reached_states:
+                continue
+            reached_states.add(current_pos)
+
+            for action, (dx, dy) in [('Up',    (0, 1)),
+                                      ('Down',  (0, -1)),
+                                      ('Left',  (-1, 0)),
+                                      ('Right', (1, 0))]:
+                nx, ny = current_pos[0] + dx, current_pos[1] + dy
+                neighbour = (nx, ny)
+
+                if (0 <= nx < width and 0 <= ny < height
+                        and neighbour not in wall_set
+                        and neighbour not in reached_states):
+                    g_new = g_cost + 1
+                    h_new = h(neighbour, goal_pos)
+                    f_new = g_new + h_new
+                    counter += 1
+                    heapq.heappush(frontier,
+                                   (f_new, g_new, counter, neighbour, path_taken + [action]))
+
+        return []
+
+    # ──────────────────────────────────────────────────────────────────────────
     # Step 1.3 — sense_and_act: plan offline, execute one action per tick
     # ──────────────────────────────────────────────────────────────────────────
     def sense_and_act(self, percept: dict) -> str:
@@ -192,6 +248,8 @@ class SearchAgent:
                 path = self.dfs_search(start, goal, walls, grid_size)
             elif self.active_algo == 'UCS':
                 path = self.ucs_search(start, goal, walls, grid_size)
+            elif self.active_algo == 'AStar':
+                path = self.astar_search(start, goal, walls, grid_size, heuristic_type='manhattan')
             else:
                 path = self.bfs_search(start, goal, walls, grid_size)
 

@@ -447,8 +447,9 @@ if __name__ == "__main__":
         "  2 = ModelBasedAgent    (uses memory to escape)\n"
         "  3 = SearchAgent — BFS  (Practical 03, optimal)\n"
         "  4 = SearchAgent — DFS  (Practical 03, suboptimal)\n"
-        "  5 = SearchAgent — UCS  (Practical 03, optimal)\n\n"
-        "Enter 1, 2, 3, 4, or 5:",
+        "  5 = SearchAgent — UCS  (Practical 03, optimal)\n"
+        "  6 = SearchAgent — A*   (Practical 04, optimal)\n\n"
+        "Enter 1, 2, 3, 4, 5, or 6:",
         parent=root,
     )
 
@@ -473,6 +474,12 @@ if __name__ == "__main__":
             a = SearchAgent(); a.active_algo = 'UCS'; return a
         agent_cls = make_ucs
         title_suffix = "Search Agent — UCS (Practical 03)"
+    elif choice == '6':
+        # A* Search Agent
+        def make_astar():
+            a = SearchAgent(); a.active_algo = 'AStar'; return a
+        agent_cls = make_astar
+        title_suffix = "Search Agent — A* (Practical 04)"
     else:
         agent_cls = SimpleReflexAgent
         title_suffix = "Simple Reflex Agent (Practical 02)"
