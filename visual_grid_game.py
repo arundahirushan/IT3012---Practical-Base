@@ -85,6 +85,8 @@ class VisualGridHuntGame:
             'all_food':  list(self.food_positions),
             # Current agent position is also exposed for search planning
             'agent_pos': list(self.agent_pos),
+            # ── Step 3.2: Expose opponents list for KB feasibility check ────
+            'opponents': [list(op) for op in self.opponents],
         }
 
     def execute_action(self, action: str):

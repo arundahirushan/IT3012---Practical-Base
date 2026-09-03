@@ -3,6 +3,7 @@ import random
 from collections import deque
 import heapq
 import math
+from logic_engine import KnowledgeBase
 
 
 # =============================================================================
@@ -34,6 +35,16 @@ class SearchAgent:
     def __init__(self):
         self.plan = []                 # Step 1.3: the offline action sequence
         self.active_algo = 'BFS'      # Switch to 'DFS' or 'UCS' to compare
+
+        # ── Step 3.1: Instantiate the Knowledge Base ─────────────────────────────
+        self.kb = KnowledgeBase()
+
+        # ── Step 3.1: Define game safety rules (Horn Clauses) ────────────────────
+        # Rule 1: TargetVisible ∧ HasDust → SafeToEngage
+        self.kb.tell_rule(['TargetVisible', 'HasDust'], 'SafeToEngage')
+
+        # Rule 2: SafeToEngage ∧ BloodseekerMissing → Retreat
+        self.kb.tell_rule(['SafeToEngage', 'BloodseekerMissing'], 'Retreat')
 
     def manhattan_distance(self, pos, goal):
         """h(n) = |x1 - x2| + |y1 - y2|"""
@@ -173,7 +184,7 @@ class SearchAgent:
     # ──────────────────────────────────────────────────────────────────────────
     # Step 1.2: A* Search
     # ──────────────────────────────────────────────────────────────────────────
-    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan'):
+    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan', percept=None):
         width, height = grid_size
         wall_set = set(map(tuple, walls))
 
@@ -208,6 +219,40 @@ class SearchAgent:
                 if (0 <= nx < width and 0 <= ny < height
                         and neighbour not in wall_set
                         and neighbour not in reached_states):
+
+                    # ── Step 3.2: KB Feasibility Check ───────────────────────────────────────
+                    # 1. Clear old percepts (facts only, rules are preserved)
+                    self.kb.clear_facts()
+
+                    # 2. Feed current tile's percepts into the KB
+                    if percept:
+                        food_list = percept.get('all_food', [])
+                        target_visible = any(
+                            abs(neighbour[0] - f[0]) + abs(neighbour[1] - f[1]) <= 2
+                            for f in food_list
+                        )
+                        if target_visible:
+                            self.kb.tell_fact('TargetVisible')
+
+                        if list(neighbour) in food_list or tuple(neighbour) in [tuple(f) for f in food_list]:
+                            self.kb.tell_fact('HasDust')
+
+                        opponents = percept.get('opponents', [])
+                        bloodseeker_present = any(
+                            abs(neighbour[0] - op[0]) + abs(neighbour[1] - op[1]) <= 1
+                            for op in opponents
+                        )
+                        if not bloodseeker_present:
+                            self.kb.tell_fact('BloodseekerMissing')
+
+                    # 3. Run inference
+                    self.kb.forward_chain()
+
+                    # 4. Feasibility gate: if Retreat was deduced, skip this tile
+                    if 'Retreat' in self.kb.facts:
+                        continue   # tile is LOGICALLY INFEASIBLE — do not add to open list
+
+                    # ── Normal A* expansion ──────────────────────────────────────
                     g_new = g_cost + 1
                     h_new = h(neighbour, goal_pos)
                     f_new = g_new + h_new
@@ -249,7 +294,7 @@ class SearchAgent:
             elif self.active_algo == 'UCS':
                 path = self.ucs_search(start, goal, walls, grid_size)
             elif self.active_algo == 'AStar':
-                path = self.astar_search(start, goal, walls, grid_size, heuristic_type='manhattan')
+                path = self.astar_search(start, goal, walls, grid_size, heuristic_type='manhattan', percept=percept)
             else:
                 path = self.bfs_search(start, goal, walls, grid_size)
 
